@@ -1,73 +1,82 @@
-import { createCanvas, loadImage } from "@napi-rs/canvas";
+import fetch from "node-fetch";
+import { createCanvas, loadImage } from "canvas";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default async function handler(req, res) {
   try {
-    const { text = "NO NAME", avatar } = req.query;
-    if (!avatar) return res.status(400).send("Missing avatar parameter");
+    const { text = "KASA NOT DEV", avatar } = req.query;
 
-    const W = 1080;
-    const H = 1080;
-    const canvas = createCanvas(W, H);
+    const canvas = createCanvas(800, 800);
     const ctx = canvas.getContext("2d");
 
-    const bg = await loadImage(path.resolve("./public/background.jpg"));
-    const crown = await loadImage(path.resolve("./public/crown.png"));
-    const userImg = await loadImage(avatar);
+    // Load background from assets folder
+    const backgroundPath = path.join(__dirname, "../assets/background.jpg");
+    const bg = await loadImage(backgroundPath);
 
-    /** Draw fixed background */
-    ctx.drawImage(bg, 0, 0, W, H);
+    ctx.drawImage(bg, 0, 0, 800, 800);
 
-    const cx = W / 2;
-    const cy = H / 2 + 40;
-    const r = 260;
+    // Dark overlay
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.fillRect(0, 0, 800, 800);
 
-    /** Avatar circle ring */
+    // Load avatar (from URL or fallback)
+    let avatarImg;
+    if (avatar) {
+      avatarImg = await loadImage(avatar);
+    } else {
+      avatarImg = await loadImage(
+        "https://i.ibb.co/Y2bgbkg/default-avatar.png"
+      );
+    }
+
+    const cx = 400;
+    const cy = 360;
+    const radius = 180;
+
+    // White circle frame
     ctx.beginPath();
-    ctx.arc(cx, cy, r + 18, 0, Math.PI * 2);
-    ctx.fillStyle = "#fff";
+    ctx.arc(cx, cy, radius + 10, 0, Math.PI * 2);
+    ctx.fillStyle = "white";
     ctx.fill();
 
-    /** Avatar circle */
+    // Avatar clipped circle
     ctx.save();
     ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.closePath();
     ctx.clip();
-    ctx.drawImage(userImg, cx - r, cy - r, r * 2, r * 2);
+
+    ctx.drawImage(
+      avatarImg,
+      cx - radius,
+      cy - radius,
+      radius * 2,
+      radius * 2
+    );
     ctx.restore();
 
-    /** Crown fixed */
-    ctx.drawImage(crown, cx - 220, cy - r - 260, 440, 240);
+    // Load crown icon
+    const crownPath = path.join(__dirname, "../assets/crown.png");
+    const crown = await loadImage(crownPath);
+    ctx.drawImage(crown, cx + 70, cy - radius - 100, 200, 140);
 
-    /** Curved text */
-    drawArcText(ctx, text.toUpperCase(), cx, cy + r + 30, r + 50);
+    // Draw name text
+    ctx.font = "bold 48px Arial";
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 8;
+    ctx.strokeText(text.toUpperCase(), cx, cy + radius + 55);
+    ctx.fillText(text.toUpperCase(), cx, cy + radius + 55);
 
     res.setHeader("Content-Type", "image/png");
-    res.status(200).send(canvas.toBuffer("image/png"));
+    return canvas.pngStream().pipe(res);
 
-  } catch (e) {
-    console.error(e);
+  } catch (err) {
+    console.error(err);
     res.status(500).send("Canvas Rendering Error");
-  }
-}
-
-function drawArcText(ctx, text, cx, cy, radius) {
-  ctx.font = "bold 70px Arial";
-  ctx.fillStyle = "#fff";
-  ctx.textBaseline = "middle";
-
-  const totalWidth = ctx.measureText(text).width;
-  let angle = Math.PI / 2 - totalWidth / radius / 2;
-
-  for (const ch of text) {
-    const w = ctx.measureText(ch).width;
-    const a = angle + w / radius / 2;
-    ctx.save();
-    ctx.translate(cx + radius * Math.cos(a),
-                  cy + radius * Math.sin(a));
-    ctx.rotate(a + Math.PI / 2);
-    ctx.fillText(ch, 0, 0);
-    ctx.restore();
-    angle += w / radius;
   }
 }
