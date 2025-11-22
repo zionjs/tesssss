@@ -1,16 +1,15 @@
 {
-  "functions": {
-    "api/**.js": {
-      "memory": 256,
-      "maxDuration": 10
-    }
-  },
-  "headers": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" }
-      ]
+      "src": "api/canvas.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/canvas",
+      "dest": "/api/canvas.js"
     }
   ]
 }
