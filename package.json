@@ -1,0 +1,10 @@
+{
+  "name": "my-canvas-project",
+  "version": "1.0.0",
+  "main": "api/canvas.js",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.43"
+  }
+}
